@@ -1,7 +1,24 @@
 [project]
 name = "maf-graph-project-01"
 version = "0.1.0"
-description = "Add your description here"
+description = "Microsoft Agent Framework + Microsoft Graph Project"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "streamlit",
+    "pydantic",
+    "pydantic-settings",
+    "python-dotenv",
+    "httpx",
+    "loguru",
+    "msal",
+    "azure-identity",
+    "openai",
+    "agent-framework",
+    "pytest",
+    "pytest-asyncio",
+    "email-validator>=2.3.0",
+]

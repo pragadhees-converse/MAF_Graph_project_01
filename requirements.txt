@@ -1,0 +1,31 @@
+# Backend
+fastapi
+uvicorn
+
+# Frontend
+streamlit
+
+# Configuration
+pydantic
+pydantic-settings
+python-dotenv
+
+# HTTP Client
+httpx
+
+# Logging
+loguru
+
+# Microsoft Authentication
+msal
+azure-identity
+
+# Azure OpenAI
+openai
+
+# Microsoft Agent Framework
+agent-framework
+
+# Testing
+pytest
+pytest-asyncio
