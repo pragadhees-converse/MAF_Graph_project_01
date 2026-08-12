@@ -9,21 +9,17 @@ logger = get_logger(__name__)
 
 
 async def handle_chat(request: ChatRequest) -> ChatResponse:
-    """
-    Entry point for a chat turn. Converts API-level history format
-    into the plain dict format the agent expects, invokes the agent,
-    and wraps the result in a standardized ChatResponse.
-    """
     correlation_id = generate_correlation_id()
-    logger.info(f"[{correlation_id}] Handling chat request.")
+    logger.info(f"[{correlation_id}] Chat request | user={request.user_email} | message='{request.message}'")
 
-    conversation_history = [
-        {"role": m.role, "content": m.content} for m in request.history
-    ]
+    conversation_history = [{"role": m.role, "content": m.content} for m in request.history]
 
     reply = await graph_agent.run(
         user_message=request.message,
+        logged_in_user_email=request.user_email,
         conversation_history=conversation_history,
     )
+
+    logger.info(f"[{correlation_id}] Chat response | user={request.user_email} | reply='{reply}'")
 
     return ChatResponse(reply=reply, request_id=correlation_id)

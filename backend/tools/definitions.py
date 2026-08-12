@@ -1,14 +1,12 @@
 # backend/tools/definitions.py
 from core.enums import ToolName
-from tools.mail.tool import execute_send_mail, send_mail
+from tools.mail.tool import execute_send_mail, make_mail_tools
 
-# Maps tool name -> internal business-logic callable.
-# Used by the dispatcher for routing/logging.
 TOOL_REGISTRY = {
     ToolName.SEND_MAIL.value: execute_send_mail,
 }
 
-# List of @ai_function-decorated callables passed directly to ChatAgent.
-# Agent Framework auto-generates each tool's JSON schema from the
-# function's type hints (including enums) — no manual schema needed.
-ALL_TOOLS = [send_mail]
+
+def get_tools_for_user(logged_in_user_email: str) -> list:
+    """Builds the tool list scoped to one user's session."""
+    return make_mail_tools(logged_in_user_email)

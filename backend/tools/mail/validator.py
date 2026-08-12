@@ -1,5 +1,5 @@
 # backend/tools/mail/validator.py
-from core.constants import MAILBOX_DOMAIN, SUBJECT_MAX_LENGTH, BODY_MAX_LENGTH
+from core.constants import SUBJECT_MAX_LENGTH, BODY_MAX_LENGTH
 from tools.mail.exceptions import ValidationError
 from tools.mail.models import SendMailRequest
 from utils.logger import get_logger
@@ -7,30 +7,20 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def validate_send_mail_request(request: SendMailRequest) -> None:
+def validate_send_mail_request(request: SendMailRequest, logged_in_user_email: str) -> None:
     """
-    Validates business rules that Pydantic alone can't express.
-    Since this is single-tenant/single-company for phase 1, this
-    only checks mailbox domain and length limits — no company/
-    tenant/environment lookup is needed anymore.
+    The core rule for this system: the system can ONLY email the
+    person currently logged in. It can never send to anyone else,
+    regardless of what the LLM or user asks for. This is enforced
+    here, not left to the LLM to "decide" correctly.
     """
-
-    mailbox_domain = request.mailbox.split("@")[-1].lower()
-    if mailbox_domain != MAILBOX_DOMAIN.lower():
+    if request.recipient.lower() != logged_in_user_email.lower():
         raise ValidationError(
-            f"Mailbox domain '{mailbox_domain}' is not allowed. "
-            f"Expected '{MAILBOX_DOMAIN}'."
+            "This system can only send mail to your own logged-in email address."
         )
 
     if len(request.subject) > SUBJECT_MAX_LENGTH:
-        raise ValidationError(
-            f"Subject exceeds max length of {SUBJECT_MAX_LENGTH} characters."
-        )
+        raise ValidationError(f"Subject exceeds max length of {SUBJECT_MAX_LENGTH} characters.")
 
     if len(request.body) > BODY_MAX_LENGTH:
-        raise ValidationError(
-            f"Body exceeds max length of {BODY_MAX_LENGTH} characters."
-        )
-
-    if request.recipient.lower() == request.mailbox.lower():
-        raise ValidationError("Recipient cannot be the same as the sender mailbox.")
+        raise ValidationError(f"Body exceeds max length of {BODY_MAX_LENGTH} characters.")

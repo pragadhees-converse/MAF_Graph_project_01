@@ -1,5 +1,7 @@
 # backend/core/constants.py
-
+# add this near the top, alongside GRAPH_BASE_URL etc.
+SYSTEM_MAILBOX = "notification@conversedatasolutions.com"  # ← set to your real system mailbox
+COMPANY_DOMAIN = "conversedatasolutions.com"
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 GRAPH_SEND_MAIL_ENDPOINT = "/users/{mailbox}/sendMail"
 

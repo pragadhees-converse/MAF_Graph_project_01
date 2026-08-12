@@ -136,6 +136,10 @@ class GraphClient:
 
         if status_code not in SUCCESS_STATUS_CODES:
             raise GraphClientError(f"Unexpected Graph status code: {status_code}", status_code)
+        logger.info(
+            f"[{correlation_id}] Graph call succeeded | {method} {endpoint} | status={status_code}"
+        )
+        return response
 
         return response
 
