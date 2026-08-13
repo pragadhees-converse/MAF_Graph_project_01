@@ -31,7 +31,7 @@ class GraphAgent(BaseAgent):
 
         agent = Agent(
             client=get_chat_client(),
-            name="GraphMailAgent",
+            name="GraphAssistant",
             instructions=SYSTEM_PROMPT,
             tools=get_tools_for_user(logged_in_user_email),
         )
