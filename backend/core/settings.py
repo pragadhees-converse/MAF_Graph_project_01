@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     AZURE_AD_CLIENT_ID: str
     AZURE_AD_TENANT_ID: str
     AZURE_AD_CLIENT_SECRET: str
+    AZURE_AD_REDIRECT_URI: str
+    SESSION_SECRET_KEY: str
 
     APP_ENV: str = "dev"
 

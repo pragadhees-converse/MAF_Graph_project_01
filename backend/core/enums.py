@@ -15,3 +15,7 @@ class ToolName(str, Enum):
 class ResponseStatus(str, Enum):
     SUCCESS = "success"
     FAILED = "failed"
+
+class ToolName(str, Enum):
+    SEND_MAIL = "send_mail"
+    SEND_TEAMS_MESSAGE = "send_teams_message"

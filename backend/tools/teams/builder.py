@@ -1,22 +1,22 @@
 # backend/tools/teams/builder.py
-
 from tools.teams.models import SendTeamsMessageRequest
 
 
-def build_send_teams_message_payload(
-    request: SendTeamsMessageRequest,
-) -> dict:
+def build_activity_notification_payload(request: SendTeamsMessageRequest) -> dict:
     """
-    Builds the exact Microsoft Graph payload required
-    to send a Teams chat message.
-
-    This is the only place that knows Graph's JSON
-    request structure.
+    Builds the payload for Graph's sendActivityNotification endpoint.
+    This is what shows up in the recipient's Teams activity feed.
     """
-
     return {
-        "body": {
-            "contentType": "text",
-            "content": request.message,
-        }
+        "topic": {
+            "source": "text",
+            "value": "Assistant Notification",
+        },
+        "activityType": "systemDefault",
+        "previewText": {
+            "content": request.message[:150],
+        },
+        "templateParameters": [
+            {"name": "systemUser", "value": "Assistant"},
+        ],
     }

@@ -43,11 +43,18 @@ class GraphClient:
 
     Responsibilities
 
-    • Attach OAuth access token
-    • Token refresh on 401
+    • Attach OAuth access token (app-only, cached via token_manager,
+      OR delegated, passed in explicitly by the caller)
+    • Token refresh on 401 — app-only calls only (see note below)
     • Retry transient failures
     • Correlation ID propagation
     • Centralized HTTP handling
+
+    This client stays identity-agnostic on purpose: it doesn't know
+    about tenants, users, or delegated auth internals — it just uses
+    whatever token it's given, or fetches an app-only one if none is
+    given. Delegated token acquisition/refresh lives in
+    auth/delegated_auth.py, one layer above this.
     """
 
     def __init__(self):
@@ -62,8 +69,9 @@ class GraphClient:
         self,
         *,
         endpoint: str,
-        tenant_id: str,
+        tenant_id: str | None = None,
         correlation_id: str,
+        access_token: str | None = None,
     ) -> httpx.Response:
 
         return await self._request(
@@ -72,6 +80,7 @@ class GraphClient:
             payload=None,
             tenant_id=tenant_id,
             correlation_id=correlation_id,
+            access_token=access_token,
         )
 
     async def post(
@@ -79,8 +88,9 @@ class GraphClient:
         *,
         endpoint: str,
         payload: dict,
-        tenant_id: str,
+        tenant_id: str | None = None,
         correlation_id: str,
+        access_token: str | None = None,
     ) -> httpx.Response:
 
         return await self._request(
@@ -89,6 +99,7 @@ class GraphClient:
             payload=payload,
             tenant_id=tenant_id,
             correlation_id=correlation_id,
+            access_token=access_token,
         )
 
     async def patch(
@@ -96,8 +107,9 @@ class GraphClient:
         *,
         endpoint: str,
         payload: dict,
-        tenant_id: str,
+        tenant_id: str | None = None,
         correlation_id: str,
+        access_token: str | None = None,
     ) -> httpx.Response:
 
         return await self._request(
@@ -106,14 +118,16 @@ class GraphClient:
             payload=payload,
             tenant_id=tenant_id,
             correlation_id=correlation_id,
+            access_token=access_token,
         )
 
     async def delete(
         self,
         *,
         endpoint: str,
-        tenant_id: str,
+        tenant_id: str | None = None,
         correlation_id: str,
+        access_token: str | None = None,
     ) -> httpx.Response:
 
         return await self._request(
@@ -122,6 +136,7 @@ class GraphClient:
             payload=None,
             tenant_id=tenant_id,
             correlation_id=correlation_id,
+            access_token=access_token,
         )
 
     #################################################################
@@ -134,19 +149,25 @@ class GraphClient:
         method: str,
         endpoint: str,
         payload: dict | None,
-        tenant_id: str,
+        tenant_id: str | None,
         correlation_id: str,
         retry_after_refresh: bool = False,
+        access_token: str | None = None,
     ) -> httpx.Response:
 
         logger.info(
             f"[{correlation_id}] Graph Request -> {method} {endpoint}"
         )
 
-        access_token = await token_manager.get_token(tenant_id)
+        # Delegated calls (Teams) pass access_token directly — already
+        # fetched/refreshed via auth/delegated_auth.py before reaching
+        # here. App-only calls (Mail) pass no token, so we fall back to
+        # the cached tenant-wide token from token_manager.
+        is_delegated_call = access_token is not None
+        token = access_token or await token_manager.get_token(tenant_id)
 
         headers = {
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "client-request-id": correlation_id,
         }
@@ -203,6 +224,26 @@ class GraphClient:
 
                 raise GraphClientError(
                     "Authentication failed after token refresh.",
+                    401,
+                )
+
+            if is_delegated_call:
+                # KNOWN GAP: delegated tokens are refreshed proactively
+                # in auth/delegated_auth.py before the call is made, but
+                # this client has no way to trigger a mid-request refresh
+                # for a delegated token — it doesn't know which user the
+                # token belongs to. A 401 here means the token was
+                # rejected despite looking valid (revoked, conditional
+                # access change, clock skew) — surfaces immediately as
+                # an error rather than retrying. tools/teams/service.py
+                # maps this to AuthenticationError, which tells the user
+                # to log in again.
+                logger.error(
+                    f"[{correlation_id}] Delegated token rejected with 401 — "
+                    "no automatic retry available for delegated calls."
+                )
+                raise GraphClientError(
+                    "Authentication failed for delegated request.",
                     401,
                 )
 

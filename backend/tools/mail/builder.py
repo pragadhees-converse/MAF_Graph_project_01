@@ -1,7 +1,7 @@
 # backend/tools/mail/builder.py
-from core.constants import SYSTEM_MAILBOX
 from core.enums import Importance
 from tools.mail.models import SendMailRequest
+from utils.html_format import ensure_html_body
 
 
 def build_send_mail_payload(request: SendMailRequest) -> dict:
@@ -15,8 +15,8 @@ def build_send_mail_payload(request: SendMailRequest) -> dict:
         "message": {
             "subject": request.subject,
             "body": {
-                "contentType": "HTML",  # was "Text" — now accepts HTML markup
-                "content": request.body,
+                "contentType": "HTML",
+                "content": ensure_html_body(request.body),  # ← guarantees safe rendering
             },
             "toRecipients": [{"emailAddress": {"address": request.recipient}}],
             "importance": importance_map[request.importance],
