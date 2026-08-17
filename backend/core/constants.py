@@ -76,3 +76,13 @@ TEAMS_MESSAGE_MAX_LENGTH = 4000
 TENANT_ID = "768a0b79-31e7-4458-901b-11417f553618"
 
 MAILBOX_DOMAIN = "conversedatasolutions.com"
+
+##############################################################
+# Microsoft Graph Users
+##############################################################
+
+GRAPH_USER_BY_EMAIL_ENDPOINT = "/users/{user_principal_name}"
+
+GRAPH_USER_SEARCH_ENDPOINT = (
+    "/users?$filter=startswith(displayName,'{display_name}')"
+)
