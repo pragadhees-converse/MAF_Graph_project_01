@@ -1,4 +1,7 @@
 # backend/tools/teams/service.py
+import json
+import uuid
+
 from auth.delegated_auth import get_delegated_token, DelegatedAuthError
 from clients.graph_client import graph_client, GraphClientError
 from core.constants import GRAPH_CHATS_ENDPOINT, GRAPH_CHAT_MESSAGES_ENDPOINT
@@ -9,7 +12,8 @@ from tools.teams.exceptions import (
 from tools.teams.graph_users import resolve_user_id
 from tools.teams.models import SendTeamsMessageRequest, SendTeamsMessageResponse
 from tools.teams.parser import parse_send_teams_message_success
-from utils.html_format import ensure_html_body  # ← new import
+from utils.adaptive_card import build_teams_adaptive_card
+from utils.html_format import ensure_html_body
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -48,11 +52,24 @@ async def send_teams_message(
         )
         chat_id = chat_response.json()["id"]
 
+        # Build the Adaptive Card and reference it from the message body
+        # via Graph's required <attachment id="..."></attachment> pattern.
+        safe_body = ensure_html_body(request.message)
+        card = build_teams_adaptive_card(title="New Message", body_html=safe_body)
+        attachment_id = str(uuid.uuid4())
+
         message_payload = {
             "body": {
                 "contentType": "html",
-                "content": ensure_html_body(request.message),  # ← was request.message raw
-            }
+                "content": f'<attachment id="{attachment_id}"></attachment>',
+            },
+            "attachments": [
+                {
+                    "id": attachment_id,
+                    "contentType": "application/vnd.microsoft.card.adaptive",
+                    "content": json.dumps(card),
+                }
+            ],
         }
         response = await graph_client.post(
             endpoint=GRAPH_CHAT_MESSAGES_ENDPOINT.format(chat_id=chat_id),
@@ -77,4 +94,6 @@ def _translate_graph_error(error, recipient) -> TeamsToolError:
         return PermissionDeniedError()
     if error.status_code == 404:
         return ResourceNotFoundError(recipient)
+    if error.status_code == 400:
+        return TeamsToolError(error.message, status_code=400, retryable=False)
     return GraphServiceError(error.message, status_code=error.status_code)
