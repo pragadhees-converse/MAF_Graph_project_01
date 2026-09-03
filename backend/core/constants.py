@@ -60,3 +60,6 @@ TEAMS_MESSAGE_MAX_LENGTH = 4000
 
 TENANT_ID = "768a0b79-31e7-4458-901b-11417f553618"  
 MAILBOX_DOMAIN = "conversedatasolutions.com"
+
+
+# APP_BASE_URL: str = "http://localhost:8000"

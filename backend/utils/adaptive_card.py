@@ -1,59 +1,46 @@
 # backend/utils/adaptive_card.py
-"""
-Builds Adaptive Card JSON payloads used by Teams messages, and a
-matching card-styled HTML layout used for Mail (since true interactive
-Adaptive Cards in Outlook require Actionable Message provider
-registration with Microsoft — a manual approval process, not
-something achievable purely in code).
-"""
+import re
 
 
-def build_teams_adaptive_card(title: str, body_html: str) -> dict:
+def build_teams_adaptive_card(
+    title: str,
+    body_html: str,
+    approve_url: str | None = None,
+    decline_url: str | None = None,
+) -> dict:
     """
-    Real, interactive Adaptive Card for Teams. body_html is expected
-    to already be safe HTML (from utils.html_format.ensure_html_body),
-    rendered here as a TextBlock with isSubtle formatting preserved
-    via simple tag stripping — Adaptive Cards use their own markdown-
-    lite syntax, not raw HTML, inside TextBlock.
+    Adaptive Card for Teams. If approve_url/decline_url are provided,
+    the card includes real Action.OpenUrl buttons — clicking them opens
+    a browser tab that hits our own backend and performs the action.
+    This works without any Bot Framework registration, unlike
+    Action.Submit, which requires a registered bot with a messaging
+    endpoint to receive the click.
     """
-    import re
-
-    # Adaptive Card TextBlocks support a small markdown subset, not
-    # HTML — strip tags to plain text with basic markdown re-added.
     plain = re.sub(r"<h[1-6]>(.*?)</h[1-6]>", r"**\1**\n", body_html)
     plain = re.sub(r"<li>(.*?)</li>", r"- \1", plain)
     plain = re.sub(r"<b>(.*?)</b>", r"**\1**", plain)
     plain = re.sub(r"<[^>]+>", "", plain).strip()
 
-    return {
+    card = {
         "type": "AdaptiveCard",
         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
         "version": "1.4",
         "body": [
-            {
-                "type": "TextBlock",
-                "text": title,
-                "weight": "Bolder",
-                "size": "Medium",
-                "wrap": True,
-            },
-            {
-                "type": "TextBlock",
-                "text": plain,
-                "wrap": True,
-                "spacing": "Medium",
-            },
+            {"type": "TextBlock", "text": title, "weight": "Bolder", "size": "Medium", "wrap": True},
+            {"type": "TextBlock", "text": plain, "wrap": True, "spacing": "Medium"},
         ],
     }
 
+    if approve_url and decline_url:
+        card["actions"] = [
+            {"type": "Action.OpenUrl", "title": "Approve", "url": approve_url},
+            {"type": "Action.OpenUrl", "title": "Decline", "url": decline_url},
+        ]
+
+    return card
+
 
 def build_mail_card_html(subject: str, body_html: str, sender_label: str = "Notification") -> str:
-    """
-    Card-styled HTML wrapper for Mail. Visually resembles a card
-    (header banner, content section, footer) but has no interactive
-    elements — this is the honest limitation for Mail without
-    Actionable Message provider registration.
-    """
     return f"""
     <div style="max-width:600px;margin:0 auto;font-family:Segoe UI,Arial,sans-serif;
                 border:1px solid #e1e1e1;border-radius:8px;overflow:hidden;">

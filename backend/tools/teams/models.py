@@ -4,10 +4,10 @@ from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 class SendTeamsMessageRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-
-    recipient: EmailStr = Field(..., description="Recipient's email address.")
+    recipient: EmailStr = Field(...)
     message: str = Field(..., min_length=1, max_length=4000)
-
+    approve_url: str | None = None
+    decline_url: str | None = None
 
 class SendTeamsMessageResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
